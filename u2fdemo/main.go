@@ -11,7 +11,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/tstranex/u2f"
+	"github.com/zackslash/u2f"
 )
 
 type authenticateRequest struct {
