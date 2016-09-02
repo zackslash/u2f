@@ -58,6 +58,11 @@ import (
 const u2fVersion = "U2F_V2"
 const timeout = 5 * time.Minute
 
+// GetU2FVersion returns the currently implemented U2F version
+func GetU2FVersion() string {
+	return u2fVersion
+}
+
 func decodeBase64(s string) ([]byte, error) {
 	for i := 0; i < len(s)%4; i++ {
 		s += "="
