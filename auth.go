@@ -15,17 +15,27 @@ import (
 )
 
 // SignRequest creates a request to initiate an authentication.
-func (c *Challenge) SignRequest(reg Registration) *SignRequest {
-	var sr SignRequest
-	sr.Version = u2fVersion
-	sr.KeyHandle = encodeBase64(reg.KeyHandle)
+func (c *Challenge) SignRequest(regs []Registration) *WebSignRequest {
+	var sr WebSignRequest
 	sr.AppID = c.AppID
 	sr.Challenge = encodeBase64(c.Challenge)
+	for _, r := range regs {
+		rk := getRegisteredKey(c.AppID, r)
+		sr.RegisteredKeys = append(sr.RegisteredKeys, rk)
+	}
 	return &sr
 }
 
+// ErrCounterTooLow is raised when the counter value received from the device is
+// lower than last stored counter value. This may indicate that the device has
+// been cloned (or is malfunctioning). The application may choose to disable
+// the particular device as precaution.
+var ErrCounterTooLow = errors.New("u2f: counter too low")
+
 // Authenticate validates a SignResponse authentication response.
 // An error is returned if any part of the response fails to validate.
+// The counter should be the counter associated with appropriate device
+// (i.e. resp.KeyHandle).
 // The latest counter value is returned, which the caller should store.
 func (reg *Registration) Authenticate(resp SignResponse, c Challenge, counter uint32) (newCounter uint32, err error) {
 	if time.Now().Sub(c.Timestamp) > timeout {
@@ -51,7 +61,7 @@ func (reg *Registration) Authenticate(resp SignResponse, c Challenge, counter ui
 	}
 
 	if ar.Counter < counter {
-		return 0, errors.New("u2f: counter not increasing")
+		return 0, ErrCounterTooLow
 	}
 
 	if err := verifyClientData(clientData, c); err != nil {
